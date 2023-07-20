@@ -1,11 +1,13 @@
 import numpy as np
 from functools import partial
 import matplotlib.pyplot as plt
-import scipy.optimize as sco
+# import scipy.optimize as sco
 
 import jax
 import jax.numpy as jnp
 from jax import jit
+import jax.scipy.optimize as jsco
+
 from tinygp import GaussianProcess
 from tinygp.kernels import quasisep
 jax.config.update("jax_enable_x64", True)
@@ -18,6 +20,7 @@ class JaxPeriodDrwFit():
         # Do we Want to have it as analysis suite for one lightcurve or many
         self.y = y
         self.yerr = yerr
+        self.jsoln_jax_ty_cpu = None
 
     def build_gp(self, theta, t, y, yerr):
         """Build a Gaussian Process model with specified kernels.
@@ -85,33 +88,6 @@ class JaxPeriodDrwFit():
         gp = self.build_gp(theta, t, y, yerr)
         return -gp.log_probability(y)
 
-        @jax.jit
-        def evaluate_neg_log_likelihood(self, theta, t, y, yerr):
-            """Evaluate the negative log-likelihood and its gradient
-            w.r.t. `theta`.
-
-            Parameters
-            ----------
-            theta: array-like
-                Array of float values representing the parameters for
-                the kernels.
-            t : array-like
-                Time domain data for the Gaussian Process.
-            y : array-like
-                Observations corresponding to the time domain data.
-            yerr : array-like
-                Uncertainties (errors) associated with the observations.
-
-            Returns
-            -------
-            neg_log_likelihood : float
-                Negative log-likelihood of the Gaussian Process model.
-            grad_neg_log_likelihood : array-like
-                Gradient of the negative log-likelihood w.r.t. `theta`.
-            """
-
-        return jax.value_and_grad(self.neg_log_likelihood)(theta, t, y, yerr)
-
     def optimize(self, theta, t, y, yerr):
         """Optimize the parameters of a Gaussian Process model.
 
@@ -128,16 +104,17 @@ class JaxPeriodDrwFit():
 
         Returns
         -------
-        soln_res : array-like
+        jsoln.fun, jsoln.x : Jax array (1,), Jax array(4,)
             Optimized parameters for the Gaussian Process model.
         """
-        # TBD: substitute with evaluate_neg_log_likelihood
-        obj = jax.jit(jax.value_and_grad(self.neg_log_likelihood))
-        print(obj)
-        soln = sco.minimize(obj, x0=theta, jac=True, method="bfgs",
-                            args=(t, y, yerr))
-        soln_res = np.insert(soln.x, 0, soln.fun)
-        return soln_res
+
+        jsoln = jsco.minimize(self.neg_log_likelihood, x0=jnp.array(theta),
+                              method="bfgs",
+                              args=(jnp.array(t),
+                                    jnp.array(y),
+                                    jnp.array(yerr)))
+
+        return jsoln.fun, jsoln.x
 
     def optimize_map(self, n, t, y, yerr):
         """Optimize the parameters of a Gaussian Process model using `map`.
@@ -159,20 +136,32 @@ class JaxPeriodDrwFit():
             Array containing the results of the optimization process
             for different initial guesses.
         """
+        t = jnp.array(t)
+        y = jnp.array(y)
+        yerr = jnp.array(yerr)
+
+        if self.jsoln_jax_ty_cpu is None:
+            jsoln_jax_ty_cpu = jax.jit(self.optimize, backend="cpu")
+            self.jsoln_jax_ty_cpu = jsoln_jax_ty_cpu
+        else:
+            pass
 
         # Create a partially applied function
         # with fixed values of t, y, and yerr
-        partial_optimize = partial(self.optimize, t=t, y=y, yerr=yerr)
+        partial_optimize = partial(self.jsoln_jax_ty_cpu, t=t, y=y, yerr=yerr)
 
         theta_init_matrix = \
             np.transpose(self.create_theta_init(n))
         soln_res_map = map(partial_optimize, theta_init_matrix)
-        res = np.array(list(soln_res_map))
+        many_init_res = list(soln_res_map)
+        # transforms jax outputs to single numpy array
+        res = np.vstack(list(map(concatenate_arrays,
+                                 jax.device_get(many_init_res))))
         self.res = res
-        res_min = res[res[:, 0] == np.min(res[:, 0])][0]
+        res_min = self.find_best_res(res)
         self.res_min = res_min
 
-        return res
+        return res_min
 
     def find_best_res(self, res):
         """Find the best result from the optimization results.
@@ -265,3 +254,10 @@ class JaxPeriodDrwFit():
         plt.ylim(-3, 0)
         plt.xlim(0, 4)
         plt.colorbar()
+
+
+def concatenate_arrays(array_tuple):
+    # Convert zero-dimensional array to a one-dimensional array
+    array1 = array_tuple[0].flatten()
+    # Concatenate the arrays
+    return np.concatenate((array1, array_tuple[1]))
