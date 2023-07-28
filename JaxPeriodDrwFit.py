@@ -116,7 +116,7 @@ class JaxPeriodDrwFit():
 
         return jsoln.fun, jsoln.x
 
-    def optimize_map(self, n, t, y, yerr):
+    def optimize_map(self, t, y, yerr, n_init=100):
         """Optimize the parameters of a Gaussian Process model using `map`.
 
         Parameters
@@ -151,7 +151,7 @@ class JaxPeriodDrwFit():
         partial_optimize = partial(self.jsoln_jax_ty_cpu, t=t, y=y, yerr=yerr)
 
         theta_init_matrix = \
-            np.transpose(self.create_theta_init(n))
+            np.transpose(self.create_theta_init(n_init))
         soln_res_map = map(partial_optimize, theta_init_matrix)
         many_init_res = list(soln_res_map)
         # transforms jax outputs to single numpy array

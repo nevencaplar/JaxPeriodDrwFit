@@ -50,12 +50,12 @@ if __name__ == '__main__':
     y = single_lc['y'].values
     yerr = single_lc['yerr'].values
     t1 = time.time()
-    test_single_lc_res = JaxPeriodDrwFit_instance.optimize_map(100, t, y, yerr)
+    test_single_lc_res = JaxPeriodDrwFit_instance.optimize_map(t, y, yerr)
     t2 = time.time()
     print(f'Execution time for single lc is {t2 - t1} sec')
     print('Best result is:' + str(test_single_lc_res))
     t1 = time.time()
-    test_single_lc_res = JaxPeriodDrwFit_instance.optimize_map(100, t, y, yerr)
+    test_single_lc_res = JaxPeriodDrwFit_instance.optimize_map(t, y, yerr, n_init=100)
     t2 = time.time()
     print(f'Execution time for second run with single lc is {t2 - t1} sec')
     print('Best result is:' + str(test_single_lc_res))
