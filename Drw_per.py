@@ -2,6 +2,8 @@
 import numpy as np
 import time
 import JaxPeriodDrwFit
+# import dill as pickle
+import cloudpickle as pickle
 
 from tape.ensemble import Ensemble
 from tape.utils import ColumnMapper
@@ -41,6 +43,7 @@ if __name__ == '__main__':
     ens.from_source_dict({'id': id, "t": t, 'y': y, 'yerr': yerr, 'filter': filter},
                          column_mapper=manual_colmap)
     single_lc = ens.compute("source")[id == 0]
+    # comment out line below if trying to run ensamble.batch
     ens.client.close()
     ##########
 
@@ -50,7 +53,7 @@ if __name__ == '__main__':
     y = single_lc['y'].values
     yerr = single_lc['yerr'].values
     t1 = time.time()
-    test_single_lc_res = JaxPeriodDrwFit_instance.optimize_map(t, y, yerr)
+    test_single_lc_res = JaxPeriodDrwFit_instance.optimize_map(t, y, yerr, n_init=100)
     t2 = time.time()
     print(f'Execution time for single lc is {t2 - t1} sec')
     print('Best result is:' + str(test_single_lc_res))
@@ -59,3 +62,13 @@ if __name__ == '__main__':
     t2 = time.time()
     print(f'Execution time for second run with single lc is {t2 - t1} sec')
     print('Best result is:' + str(test_single_lc_res))
+
+    # https://github.com/google/jax/issues/5043
+    # https://jax.readthedocs.io/en/latest/errors.html#jax.errors.ConcretizationTypeError
+    pickle.dumps(JaxPeriodDrwFit_instance.optimize_map)
+    print('OK')
+
+    # res = ens.batch(JaxPeriodDrwFit_instance.optimize_map, 'time', 'flux', 'error',
+    #                 compute=True, meta=None, n_init=100)
+    # print(res)
+    # ens.client.close()
