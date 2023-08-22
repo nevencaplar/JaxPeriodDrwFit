@@ -6,6 +6,11 @@ from tqdm import tqdm
 # import dill as pickle
 # import cloudpickle as pickle
 
+"""
+
+COMB_002_ = using custom created ezTao data; 24 min on single core
+"""
+
 # from tape.ensemble import Ensemble
 # from tape.utils import ColumnMapper
 
@@ -23,20 +28,34 @@ if __name__ == '__main__':
     """
 
     for yyy in tqdm(range(0, 99)):
-        for zzz in range(0, 5):
+        # for zzz in range(0, 5):
+        for zzz in range(0, 1):
             formatted_yyy = f'{yyy:03}'
             formatted_zzz = f'{yyy:03}'
-            t_true = np.loadtxt('/epyc/users/suberlak/2023_DRW_SINUSOID_COMBINE/data/t_true.txt')
-            data_all = \
-                np.load('/epyc/users/suberlak/2023_DRW_SINUSOID_COMBINE/data/COMB_001_'
-                        + formatted_yyy + '_' + formatted_yyy + '.npy', allow_pickle=True)
+            # t_true = np.loadtxt('/epyc/users/suberlak/2023_DRW_SINUSOID_COMBINE/data/t_true.txt')
+            # data_all = \
+            #    np.load('/epyc/users/suberlak/2023_DRW_SINUSOID_COMBINE/data/COMB_001_'
+            #            + formatted_yyy + '_' + formatted_zzz + '.npy', allow_pickle=True)
+
+            # generated in create_data script, to avoid epyc failure
+            t_multi = np.load('/astro/users/ncaplar/data/t_multi.npy')
+            y_multi = np.load('/astro/users/ncaplar/data/y_multi.npy')
+            yerr_multi = np.load('/astro/users/ncaplar/data/yerr_multi.npy')
+
             id, t, y, yerr, filter = np.array([]), np.array([]), np.array([]), np.array([]), np.array([])
+
+            # array in which we will save the results
             res_s_par_combo = np.zeros((100, 5))
 
             for i in range(100):
-                data = data_all[()].get(i)
+                # data = data_all[()].get(i)
+
+                # get time for a single lightcurve
+                t_true = t_multi[i]
+
                 downsample_int = np.sort(np.random.choice(np.arange(len(t_true)), 100))
                 t_single = t_true[downsample_int]
+
                 # id = np.append(id, np.full(len(downsample_int), i))
                 # filter_single = np.full(len(t_single), 'r')
                 # t = np.append(t, t_single)
@@ -45,7 +64,9 @@ if __name__ == '__main__':
                 y_err_single = np.full(len(t_single), 0.001)
                 # yerr = np.append(yerr, np.full(len(t_single), 0.001))
 
-                y_pre = data['y_tot'][downsample_int]
+                # y_pre = data['y_tot'][downsample_int]
+                y_pre = y_multi[i][downsample_int]
+
                 noise = np.random.normal(0, y_err_single)
                 # y = np.append(y, y_pre + noise)
                 y_single = y_pre + noise
@@ -56,7 +77,7 @@ if __name__ == '__main__':
                 # t2 = time.time()
                 # print(f'Execution time for single lc is {t2 - t1} sec')
                 res_s_par_combo[i] = test_single_lc_res
-                np.save('/astro/users/ncaplar/data/res_tests/COMB_001_'
+                np.save('/astro/users/ncaplar/data/res_tests/COMB_002_'
                         + formatted_yyy+'_'+formatted_zzz+'_run_0', res_s_par_combo)
 
     # print(f'Best result for loop index {i} is: {test_single_lc_res}')

@@ -13,24 +13,43 @@ if __name__ == '__main__':
     ##########
     # creating ensamble
     # TODO: do this better
+    """
     t_true = np.loadtxt('/epyc/users/suberlak/2023_DRW_SINUSOID_COMBINE/data/t_true.txt')
     data_all = \
         np.load('/epyc/users/suberlak/2023_DRW_SINUSOID_COMBINE/data/COMB_001_054_009.npy', allow_pickle=True)
+    """
+
+    # generated in create_data script, to avoid epyc failure
+    t_multi = np.load('/astro/users/ncaplar/data/t_multi.npy')
+    y_multi = np.load('/astro/users/ncaplar/data/y_multi.npy')
+    yerr_multi = np.load('/astro/users/ncaplar/data/yerr_multi.npy')
+
     id, t, y, yerr, filter = np.array([]), np.array([]), np.array([]), np.array([]), np.array([])
 
     for i in range(100):
-        data = data_all[()].get(i)
+        # data = data_all[()].get(i)
+
+        # get time for a single lightcurve
+        t_true = t_multi[i]
+        # sample 100 points from 200
         downsample_int = np.sort(np.random.choice(np.arange(len(t_true)), 100))
+        # extract 100 times from 200
         t_single = t_true[downsample_int]
+
         id = np.append(id, np.full(len(downsample_int), i))
         filter_single = np.full(len(t_single), 'r')
         t = np.append(t, t_single)
         filter = np.append(filter, filter_single)
 
+        # create custom errors
         y_err_single = np.full(len(t_single), 0.001)
         yerr = np.append(yerr, np.full(len(t_single), 0.001))
 
-        y_pre = data['y_tot'][downsample_int]
+        # extract measurements; 100 from each lightcurve
+        # y_pre = data['y_tot'][downsample_int]
+        y_pre = y_multi[i][downsample_int]
+
+        # create noise and add to lightcurves
         noise = np.random.normal(0, y_err_single)
         y = np.append(y, y_pre + noise)
 
