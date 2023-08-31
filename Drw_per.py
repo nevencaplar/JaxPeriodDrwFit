@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import numpy as np
-import time
+# import time
 import JaxPeriodDrwFit
 # import dill as pickle
-import cloudpickle as pickle
+# import cloudpickle as pickle
 
 from tape.ensemble import Ensemble
 from tape.utils import ColumnMapper
@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     id, t, y, yerr, filter = np.array([]), np.array([]), np.array([]), np.array([]), np.array([])
 
-    for i in range(100):
+    for i in range(5):
         # data = data_all[()].get(i)
 
         # get time for a single lightcurve
@@ -69,6 +69,7 @@ if __name__ == '__main__':
     res = ens.batch(JaxPeriodDrwFit_instance.optimize_map, 't', 'y', 'yerr',
                     compute=True, meta=None, n_init=100)
     print(res)
+    np.save(res)
     ens.client.close()
     """
     # https://github.com/nevencaplar/epyc_notebooks/blob/main/tiny_lsst.ipynb
@@ -100,4 +101,3 @@ if __name__ == '__main__':
     pickle.dumps(JaxPeriodDrwFit_instance.optimize_map)
     """
     print('OK')
-

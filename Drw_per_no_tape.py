@@ -74,6 +74,8 @@ if __name__ == '__main__':
                 # t1 = time.time()
                 test_single_lc_res = JaxPeriodDrwFit_instance.optimize_map(t_single, y_single, y_err_single,
                                                                            n_init=100)
+                # Put here the analysis without the period component
+                # Put here the analysis with only the period component
                 # t2 = time.time()
                 # print(f'Execution time for single lc is {t2 - t1} sec')
                 res_s_par_combo[i] = test_single_lc_res
