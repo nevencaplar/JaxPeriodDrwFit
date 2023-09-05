@@ -7,14 +7,20 @@ from tqdm import tqdm
 # import cloudpickle as pickle
 
 """
+# data created create_data.py script
+# analyzed in Drw_per_no_tape.py
 
-COMB_002_ = using custom created ezTao data; 24 min on single core
+COMB_002_ = using custom created ezTao data; 24 min on single core (but running same data 100 times!)
+COMB_003_ = using custom created ezTao data; running both combined kernels and drw
+COMB_004_ = using custom created ezTao data; running both combined kernels and drw; done on LSST ligtcurve
+            generated from a random position in redback
 """
 
 # from tape.ensemble import Ensemble
 # from tape.utils import ColumnMapper
 
 JaxPeriodDrwFit_instance = JaxPeriodDrwFit.JaxPeriodDrwFit()
+JaxPeriodDrwFit_instance_drw = JaxPeriodDrwFit.JaxPeriodDrwFit()
 
 if __name__ == '__main__':
     print('Hello World!')
@@ -27,7 +33,7 @@ if __name__ == '__main__':
     All light curves here are "ideal", i.e. no noise,  evaluated at times t_true.txt
     """
 
-    for yyy in tqdm(range(0, 99)):
+    for yyy in tqdm(range(0, 1)):
         # for zzz in range(0, 5):
         for zzz in range(0, 1):
             formatted_yyy = f'{yyy:03}'
@@ -38,14 +44,15 @@ if __name__ == '__main__':
             #            + formatted_yyy + '_' + formatted_zzz + '.npy', allow_pickle=True)
 
             # generated in create_data script, to avoid epyc failure
-            t_multi = np.load('/astro/users/ncaplar/data/t_multi.npy')
-            y_multi = np.load('/astro/users/ncaplar/data/y_multi.npy')
-            yerr_multi = np.load('/astro/users/ncaplar/data/yerr_multi.npy')
+            t_multi = np.load('/astro/users/ncaplar/data/t_multi_LSST.npy')
+            y_multi = np.load('/astro/users/ncaplar/data/y_multi_LSST.npy')
+            yerr_multi = np.load('/astro/users/ncaplar/data/yerr_multi_LSST.npy')
 
             id, t, y, yerr, filter = np.array([]), np.array([]), np.array([]), np.array([]), np.array([])
 
             # array in which we will save the results
             res_s_par_combo = np.zeros((100, 5))
+            res_s_par_combo_drw = np.zeros((100, 3))
 
             for i in range(100):
                 # data = data_all[()].get(i)
@@ -74,12 +81,20 @@ if __name__ == '__main__':
                 # t1 = time.time()
                 test_single_lc_res = JaxPeriodDrwFit_instance.optimize_map(t_single, y_single, y_err_single,
                                                                            n_init=100)
+                test_single_lc_res_drw = JaxPeriodDrwFit_instance_drw.optimize_map_drw(t_single,
+                                                                                       y_single,
+                                                                                       y_err_single,
+                                                                                       n_init=100)
                 # Put here the analysis without the period component
                 # Put here the analysis with only the period component
                 # t2 = time.time()
                 # print(f'Execution time for single lc is {t2 - t1} sec')
                 res_s_par_combo[i] = test_single_lc_res
-                np.save('/astro/users/ncaplar/data/res_tests/COMB_002_'
-                        + formatted_yyy+'_'+formatted_zzz+'_run_0', res_s_par_combo)
+                res_s_par_combo_drw[i] = test_single_lc_res_drw
+     
+    np.save('/astro/users/ncaplar/data/res_tests/COMB_004_'
+            + formatted_yyy+'_'+formatted_zzz+'_run_0', res_s_par_combo)
+    np.save('/astro/users/ncaplar/data/res_tests/COMB_004_'
+            + formatted_yyy+'_'+formatted_zzz+'_drw_run_0', res_s_par_combo_drw)
 
     # print(f'Best result for loop index {i} is: {test_single_lc_res}')

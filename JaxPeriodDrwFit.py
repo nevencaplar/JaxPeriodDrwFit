@@ -23,7 +23,7 @@ class JaxPeriodDrwFit():
         self.jsoln_jax_ty_cpu = None
 
     def build_gp(self, theta, t, y, yerr):
-        """Build a Gaussian Process model with specified kernels.
+        """Build a Gaussian Process model with drw + periodic kernel.
 
         Parameters
         ----------
@@ -64,6 +64,44 @@ class JaxPeriodDrwFit():
 
         return GaussianProcess(kernel, t, diag=yerr, mean=np.mean(y))
 
+    def build_gp_drw(self, theta, t, y, yerr):
+        """Build a Gaussian Process model with the damped random walk kernel.
+
+        Parameters
+        ----------
+        theta : array-like, (2,)
+            Array of float values representing the parameters for the kernel.
+        t : array-like
+            Time domain data for the Gaussian Process.
+        y : array-like
+            Observations corresponding to the time domain data.
+        yerr : array-like
+            Uncertainties (errors) associated with the observations.
+
+        Returns
+        -------
+        gp : GaussianProcess
+            Gaussian Process model with the damped random walk kernel.
+
+        Example
+        -------
+        theta = [0.5, -1.0, 0.8, -2.0]
+        gp = build_gp(theta, t, y, yerr)
+        """
+
+        assert len(theta) == 2
+
+        log_drw_scale = theta[0]
+        log_drw_amp = theta[1]
+
+        exp_kernel = quasisep.Exp(
+            scale=10**log_drw_scale, sigma=10**log_drw_amp)
+
+        kernel = exp_kernel
+        self.kernel = kernel
+
+        return GaussianProcess(kernel, t, diag=yerr, mean=np.mean(y))
+
     @partial(jit, static_argnums=(0,))
     def neg_log_likelihood(self, theta, t, y, yerr):
         """Compute the negative log-likelihood of a Gaussian Process model.
@@ -88,6 +126,30 @@ class JaxPeriodDrwFit():
         gp = self.build_gp(theta, t, y, yerr)
         return -gp.log_probability(y)
 
+    @partial(jit, static_argnums=(0,))
+    def neg_log_likelihood_drw(self, theta, t, y, yerr):
+        """Compute the negative log-likelihood of a DRW Gaussian Process model.
+
+        Parameters
+        ----------
+        theta : array-like
+            Array of float values representing the parameters for the kernels.
+        t : array-like
+            Time domain data for the Gaussian Process.
+        y : array-like
+            Observations corresponding to the time domain data.
+        yerr : array-like
+            Uncertainties (errors) associated with the observations.
+
+        Returns
+        -------
+        neg_log_likelihood : float
+            Negative log-likelihood of the Gaussian Process model.
+        """
+
+        gp = self.build_gp_drw(theta, t, y, yerr)
+        return -gp.log_probability(y)
+
     def optimize(self, theta, t, y, yerr):
         """Optimize the parameters of a Gaussian Process model.
 
@@ -109,6 +171,34 @@ class JaxPeriodDrwFit():
         """
 
         jsoln = jsco.minimize(self.neg_log_likelihood, x0=jnp.array(theta),
+                              method="bfgs",
+                              args=(jnp.array(t),
+                                    jnp.array(y),
+                                    jnp.array(yerr)))
+
+        return jsoln.fun, jsoln.x
+
+    def optimize_drw(self, theta, t, y, yerr):
+        """Optimize the parameters of a damped random walk Gaussian Process model.
+
+        Parameters
+        ----------
+        theta : array-like
+            Array of float values representing the parameters for the kernels.
+        t : array-like
+            Time domain data for the Gaussian Process.
+        y : array-like
+            Observations corresponding to the time domain data.
+        yerr : array-like
+            Uncertainties (errors) associated with the observations.
+
+        Returns
+        -------
+        jsoln.fun, jsoln.x : Jax array (1,), Jax array(4,)
+            Optimized parameters for the Gaussian Process model.
+        """
+
+        jsoln = jsco.minimize(self.neg_log_likelihood_drw, x0=jnp.array(theta),
                               method="bfgs",
                               args=(jnp.array(t),
                                     jnp.array(y),
@@ -163,6 +253,55 @@ class JaxPeriodDrwFit():
 
         return res_min
 
+    def optimize_map_drw(self, t, y, yerr, n_init=100):
+        """Optimize the parameters of a Gaussian Process model using `map`.
+
+        Parameters
+        ----------
+        n : int
+            The number of times to create alternative theta initializations.
+        t : array-like
+            Time domain data for the Gaussian Process.
+        y : array-like
+            Observations corresponding to the time domain data.
+        yerr : array-like
+            Uncertainties (errors) associated with the observations.
+
+        Returns
+        -------
+        res : array-like
+            Array containing the results of the optimization process
+            for different initial guesses.
+        """
+        t = jnp.array(t)
+        y = jnp.array(y)
+        yerr = jnp.array(yerr)
+
+        if self.jsoln_jax_ty_cpu is None:
+            jsoln_jax_ty_cpu = jax.jit(self.optimize_drw, backend="cpu")
+            self.jsoln_jax_ty_cpu = jsoln_jax_ty_cpu
+        else:
+            pass
+
+        # Create a partially applied function
+        # with fixed values of t, y, and yerr
+        partial_optimize = partial(self.jsoln_jax_ty_cpu, t=t, y=y, yerr=yerr)
+
+        theta_init_matrix = \
+            np.transpose(self.create_theta_init(n_init))
+        # take only first two columns
+        theta_init_matrix = theta_init_matrix[:, [0, 1]]
+        soln_res_map = map(partial_optimize, theta_init_matrix)
+        many_init_res = list(soln_res_map)
+        # transforms jax outputs to single numpy array
+        res = np.vstack(list(map(concatenate_arrays,
+                                 jax.device_get(many_init_res))))
+        self.res = res
+        res_min = self.find_best_res(res)
+        self.res_min = res_min
+
+        return res_min
+
     def find_best_res(self, res):
         """Find the best result from the optimization results.
 
@@ -195,6 +334,7 @@ class JaxPeriodDrwFit():
         """
         if n is None:
             n = 1
+        np.random.seed(42)
         theta_init = jnp.array([np.random.uniform(0, 5, n),
                                np.random.uniform(-3, 2, n),
                                np.random.uniform(0, 5, n),
