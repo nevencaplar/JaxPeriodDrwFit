@@ -226,6 +226,14 @@ class JaxPeriodDrwFit():
             Array containing the results of the optimization process
             for different initial guesses.
         """
+
+        sorted_indices = np.argsort(t)
+
+        # Use these indices to sort y and yerr
+        t = t[sorted_indices]
+        y = y[sorted_indices]
+        yerr = yerr[sorted_indices]
+
         t = jnp.array(t)
         y = jnp.array(y)
         yerr = jnp.array(yerr)
@@ -273,6 +281,14 @@ class JaxPeriodDrwFit():
             Array containing the results of the optimization process
             for different initial guesses.
         """
+
+        sorted_indices = np.argsort(t)
+
+        # Use these indices to sort y and yerr
+        t = t[sorted_indices]
+        y = y[sorted_indices]
+        yerr = yerr[sorted_indices]
+
         t = jnp.array(t)
         y = jnp.array(y)
         yerr = jnp.array(yerr)
