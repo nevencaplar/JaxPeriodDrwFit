@@ -18,6 +18,8 @@ class JaxPeriodDrwFit():
     def __init__(self, t=None, y=None, yerr=None):
         # TODO: Every function has full and DRW option as everything is
         # defined twice; I do not know how to make this better at this point
+        # TODO: custom specification of padded values
+        # TODO: experiment with gpu
         self.y = y
         self.yerr = yerr
         self.jsoln_jax_ty_cpu = None
@@ -459,9 +461,12 @@ def determine_pad(t):
     n_pad : int
         By how much the input has to be padded
     """
-    comp_sizes = np.array([10, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200,
-                           250, 300, 350, 400, 450, 500, 600, 700, 800, 900,
-                           1000, 1200, 1400, 1600, 1800, 2000, 2500, 3000,
-                           3500, 4000, 4500, 5000, 6000, 7000, 8000, 9000])
+    # comp_sizes = np.array([10, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200,
+    #                       250, 300, 350, 400, 450, 500, 600, 700, 800, 900,
+    #                       1000, 1200, 1400, 1600, 1800, 2000, 2500, 3000,
+    #                       3500, 4000, 4500, 5000, 6000, 7000, 8000, 9000])
+    
+    comp_sizes = np.array([100, 200, 500, 2000, 5000, 9000])
+    
     n_pad = comp_sizes[np.where(comp_sizes > len(t))][0] - len(t)
     return n_pad
