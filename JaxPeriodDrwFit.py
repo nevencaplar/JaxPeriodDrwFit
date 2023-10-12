@@ -16,8 +16,8 @@ jax.config.update("jax_enable_x64", True)
 class JaxPeriodDrwFit():
 
     def __init__(self, t=None, y=None, yerr=None):
-        # Do we want to init like this?
-        # Do we Want to have it as analysis suite for one lightcurve or many
+        # TODO: Every function has full and DRW option as everything is
+        # defined twice; I do not know how to make this better at this point
         self.y = y
         self.yerr = yerr
         self.jsoln_jax_ty_cpu = None
@@ -238,6 +238,8 @@ class JaxPeriodDrwFit():
             n_pad = determine_pad(t)
         else:
             n_pad = 0
+
+        # any0 large number to make the padded values irrelevant
         very_large_number = 1000000
 
         y_pad = jax.numpy.pad(y, (0, n_pad), mode='mean')
@@ -350,6 +352,11 @@ class JaxPeriodDrwFit():
         -------
         best_res : array-like
             The result with the minimum negative log-likelihood value.
+
+        Notes
+        -------
+        This function makes strong assumption that function likelihood-like
+        result is specified in the first column of the result array
         """
         res_min = res[res[:, 0] == np.min(res[:, 0])][0]
         return res_min
@@ -440,6 +447,18 @@ def concatenate_arrays(array_tuple):
 
 
 def determine_pad(t):
+    """Determines by how many entries to pad the input arrays.
+
+    Parameters
+    ----------
+    t : array-like
+        Array containing the input. Only used for length calculation.
+
+    Returns
+    -------
+    n_pad : int
+        By how much the input has to be padded
+    """
     comp_sizes = np.array([10, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200,
                            250, 300, 350, 400, 450, 500, 600, 700, 800, 900,
                            1000, 1200, 1400, 1600, 1800, 2000, 2500, 3000,
