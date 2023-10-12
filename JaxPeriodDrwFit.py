@@ -206,7 +206,7 @@ class JaxPeriodDrwFit():
 
         return jsoln.fun, jsoln.x
 
-    def optimize_map(self, t, y, yerr, n_init=100):
+    def optimize_map(self, t, y, yerr, n_init=100, use_pad=True):
         """Optimize the parameters of a Gaussian Process model using `map`.
 
         Parameters
@@ -234,9 +234,19 @@ class JaxPeriodDrwFit():
         y = y[sorted_indices]
         yerr = yerr[sorted_indices]
 
-        t = jnp.array(t)
-        y = jnp.array(y)
-        yerr = jnp.array(yerr)
+        if use_pad:
+            n_pad = determine_pad(t)
+        else:
+            n_pad = 0
+        very_large_number = 1000000
+
+        y_pad = jax.numpy.pad(y, (0, n_pad), mode='mean')
+        t_pad = jax.numpy.pad(t, (0, n_pad), mode='constant', constant_values=very_large_number)
+        yerr_pad = jax.numpy.pad(yerr, (0, n_pad), mode='constant', constant_values=very_large_number)
+
+        t = jnp.array(t_pad)
+        y = jnp.array(y_pad)
+        yerr = jnp.array(yerr_pad)
 
         if self.jsoln_jax_ty_cpu is None:
             jsoln_jax_ty_cpu = jax.jit(self.optimize, backend="cpu")
@@ -261,7 +271,7 @@ class JaxPeriodDrwFit():
 
         return res_min
 
-    def optimize_map_drw(self, t, y, yerr, n_init=100):
+    def optimize_map_drw(self, t, y, yerr, n_init=100, use_pad=True):
         """Optimize the parameters of a Gaussian Process model using `map`.
 
         Parameters
@@ -289,9 +299,19 @@ class JaxPeriodDrwFit():
         y = y[sorted_indices]
         yerr = yerr[sorted_indices]
 
-        t = jnp.array(t)
-        y = jnp.array(y)
-        yerr = jnp.array(yerr)
+        if use_pad:
+            n_pad = determine_pad(t)
+        else:
+            n_pad = 0
+        very_large_number = 1000000
+
+        y_pad = jax.numpy.pad(y, (0, n_pad), mode='mean')
+        t_pad = jax.numpy.pad(t, (0, n_pad), mode='constant', constant_values=very_large_number)
+        yerr_pad = jax.numpy.pad(yerr, (0, n_pad), mode='constant', constant_values=very_large_number)
+
+        t = jnp.array(t_pad)
+        y = jnp.array(y_pad)
+        yerr = jnp.array(yerr_pad)
 
         if self.jsoln_jax_ty_cpu is None:
             jsoln_jax_ty_cpu = jax.jit(self.optimize_drw, backend="cpu")
@@ -417,3 +437,12 @@ def concatenate_arrays(array_tuple):
     array1 = array_tuple[0].flatten()
     # Concatenate the arrays
     return np.concatenate((array1, array_tuple[1]))
+
+
+def determine_pad(t):
+    comp_sizes = np.array([10, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200,
+                           250, 300, 350, 400, 450, 500, 600, 700, 800, 900,
+                           1000, 1200, 1400, 1600, 1800, 2000, 2500, 3000,
+                           3500, 4000, 4500, 5000, 6000, 7000, 8000, 9000])
+    n_pad = comp_sizes[np.where(comp_sizes > len(t))][0] - len(t)
+    return n_pad
