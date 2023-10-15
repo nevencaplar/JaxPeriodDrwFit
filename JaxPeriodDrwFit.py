@@ -242,7 +242,8 @@ class JaxPeriodDrwFit():
             n_pad = 0
 
         # any0 large number to make the padded values irrelevant
-        very_large_number = 1000000
+        very_large_number = 900000000
+        print(very_large_number)
 
         y_pad = jax.numpy.pad(y, (0, n_pad), mode='mean')
         t_pad = jax.numpy.pad(t, (0, n_pad), mode='constant', constant_values=very_large_number)
