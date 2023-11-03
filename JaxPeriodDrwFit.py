@@ -9,7 +9,9 @@ from jax import jit
 import jax.scipy.optimize as jsco
 
 from tinygp import GaussianProcess
-from tinygp.kernels import quasisep
+# from tinygp.kernels import quasisep
+from tinygp import kernels
+
 jax.config.update("jax_enable_x64", True)
 
 
@@ -55,13 +57,21 @@ class JaxPeriodDrwFit():
         log_drw_amp = theta[1]
         log_per_scale = theta[2]
         log_per_amp = theta[3]
+
+        """
         exp_kernel = quasisep.Exp(
             scale=10**log_drw_scale, sigma=10**log_drw_amp)
 
         periodic_kernel = quasisep.Cosine(
             scale=10**(log_per_scale), sigma=10**(log_per_amp))
+        """
+        sigma_drw = 10**log_drw_amp
+        sigma_per = 10**log_per_amp
 
-        kernel = exp_kernel + periodic_kernel
+        exp_kernel = kernels.Exp(scale=10**log_drw_scale)
+        periodic_kernel = kernels.Cosine(scale=10**(log_per_scale))
+
+        kernel = sigma_drw * exp_kernel + sigma_per * periodic_kernel
         self.kernel = kernel
 
         return GaussianProcess(kernel, t, diag=yerr, mean=np.mean(y))
@@ -96,10 +106,14 @@ class JaxPeriodDrwFit():
         log_drw_scale = theta[0]
         log_drw_amp = theta[1]
 
+        """
         exp_kernel = quasisep.Exp(
             scale=10**log_drw_scale, sigma=10**log_drw_amp)
+        """
+        sigma_drw = 10**log_drw_amp
+        exp_kernel = kernels.Exp(scale=10**log_drw_scale)
 
-        kernel = exp_kernel
+        kernel = sigma_drw * exp_kernel
         self.kernel = kernel
 
         return GaussianProcess(kernel, t, diag=yerr, mean=np.mean(y))
@@ -243,7 +257,7 @@ class JaxPeriodDrwFit():
 
         # any0 large number to make the padded values irrelevant
         very_large_number = 900000000
-        print(very_large_number)
+        # print(very_large_number)
 
         y_pad = jax.numpy.pad(y, (0, n_pad), mode='mean')
         t_pad = jax.numpy.pad(t, (0, n_pad), mode='constant', constant_values=very_large_number)
@@ -466,8 +480,8 @@ def determine_pad(t):
     #                       250, 300, 350, 400, 450, 500, 600, 700, 800, 900,
     #                       1000, 1200, 1400, 1600, 1800, 2000, 2500, 3000,
     #                       3500, 4000, 4500, 5000, 6000, 7000, 8000, 9000])
-    
+
     comp_sizes = np.array([100, 200, 500, 2000, 5000, 9000])
-    
+
     n_pad = comp_sizes[np.where(comp_sizes > len(t))][0] - len(t)
     return n_pad
