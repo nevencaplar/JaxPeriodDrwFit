@@ -303,7 +303,7 @@ class JaxPeriodDrwFit():
         t = t[sorted_indices]
         y = y[sorted_indices]
         yerr = yerr[sorted_indices]
-
+        """
         if use_pad:
             n_pad = determine_pad(t)
         else:
@@ -317,7 +317,7 @@ class JaxPeriodDrwFit():
         t = jnp.array(t_pad)
         y = jnp.array(y_pad)
         yerr = jnp.array(yerr_pad)
-
+        """ 
         if self.jsoln_jax_ty_cpu is None:
             jsoln_jax_ty_cpu = jax.jit(self.optimize_drw, backend="cpu")
             self.jsoln_jax_ty_cpu = jsoln_jax_ty_cpu
