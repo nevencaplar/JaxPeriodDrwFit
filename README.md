@@ -7,9 +7,8 @@ This project aims to find and characterize potential periodic signals in AGN (ac
 * acceleration of code via JAX
 
 The files contained are:
-* Analysis.ipynb - Analysis of the results from the fitting algorithms
-* Drw_per.py - Script to analyze the data, with TAPE
-* Drw_per_i.ipynb - Interactive notebook for exploration
-* Drw_per_no_tape.py - Script to analyze the data, without TAPE
-* JaxPeriodDrwFit.py - Main dataclass
-* create_data - Script to generate fake data with known variability parameters 
+* Create.ipynb - Notebook to create simulated ZTF data with known properties
+* Fit.ipynb - Notebook to fit the data with stochastic + periodic component
+* Analyze.ipynb - Notebook for analysis of the results from the fitting algorithms
+* Visualize.ipynb - Notebook to show the results of the analysis
+* JaxPeriodDrwFit.py - Main dataclass 
